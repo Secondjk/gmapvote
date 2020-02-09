@@ -5,10 +5,6 @@ util.AddNetworkString("MapVote_Update")
 util.AddNetworkString("MapVote_Cancel")
 util.AddNetworkString("MapVote_End")
 
-local function canNominate(ply, map)
-    return isAvailableMap(map) && IsValid(MapVote.AllMaps[map]) && !MapVote.Allow
-end
-
 net.Receive("MapVote_Update", function(len, ply)
     if ( MapVote.Allow && IsValid(ply) ) then
         local map_id = net.ReadUInt(32)
@@ -24,7 +20,8 @@ net.Receive("MapVote_Update", function(len, ply)
 end)
 
 function MapVote.UpdateNominatedMap(ply, map) -- функция вызывается при каждой номинации игроком    
-    if ( !canNominate(ply, map) ) then return false end
+    if !( isAvailableMap(map) && table.HasValue(MapVote.AllMaps, map) && 
+        !MapVote.Allow && MapVote.NominatedMaps[ply:SteamID()] != map ) then return false end
 
     MapVote.NominatedMaps[ply:SteamID()] = map
     return true
@@ -32,8 +29,8 @@ end
 
 function MapVote.NominateChatCommands(ply, text)
     local arguments = string.Split(text, " ")
-
-    if ( table.HasValue(MapVote.Config.NominateCommands, string.sub(string.lower(arguments[1]), 2)) ) then
+    
+    if ( table.HasValue(MapVote.Config.NominateCommands, string.sub(string.lower(arguments[1]), 2)) && arguments[2] != nil ) then 
         local map = arguments[2]
 
         if ( MapVote.UpdateNominatedMap(ply, map) ) then

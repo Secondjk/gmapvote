@@ -24,7 +24,7 @@ end
 SetMaps()
 
 function isAvailableMap(map)
-    return !( IsValid(MapVote.BlackList[map]) || IsValid(MapVote.RecentMaps[map]) )
+    return !( table.HasValue(MapVote.BlackList, map) || table.HasValue(MapVote.RecentMaps, map) )
 end
 
 function MapVote.CreateMapList()
@@ -38,7 +38,7 @@ function MapVote.CreateMapList()
     for _, map in RandomPairs(MapVote.AllMaps) do
         if ( #actualMaps == MapVote.Config.MaxMaps ) then break end
 
-        if ( isAvailableMap(map) ) then continue end
+        if ( !isAvailableMap(map) ) then continue end
 
         table.insert(actualMaps, map)
     end
@@ -49,9 +49,8 @@ end
 
 function MapVote.Start()
     MapVote.Votes = {}
-     
-    MapVote.CreateMapList()
-    if ( !MapVote.CurrentMaps ) then error("createmaplist err") end
+
+    if ( !MapVote.CreateMapList() ) then error("createmaplist err") end
 
     net.Start("MapVote_Start")
         net.WriteTable(MapVote.CurrentMaps)
