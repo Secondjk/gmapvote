@@ -1,9 +1,19 @@
 MapVote.DefaultConfig = {
     MaxMaps = 6,
-    MapTime = 30, -- minutes
+    VoteTime = 30, -- seconds
+    --MapTime = 30, -- minutes
     MapsBeforeRevote = 4,
+    AllowCurrentMap = true,
     MaxNominatesPerPlayer = 1,
+    PlayersCanNominateMaps = true,
+    MaxNominatedMaps = 3,
     NominateCommands = { "rtvmap", "nominate", "addmap", "addnominate" }
+}
+
+MapVote.DefaultConfig.ExtraPower = {
+    vip = 2,
+    admin = 1,
+    superadmin = 1
 }
 
 if (SERVER) then

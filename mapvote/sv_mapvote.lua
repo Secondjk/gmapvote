@@ -1,13 +1,13 @@
 MapVote.AllMaps = MapVote.AllMaps or {}
-MapVote.Maps = MapVote.Maps or {}
+MapVote.Allow = false
 
-if file.Exists("mapvote/recent.txt", "DATA") then
+if file.Exists( "mapvote/recent.txt", "DATA" ) then
     MapVote.RecentMaps = util.JSONToTable(file.Read("mapvote/recent.txt", "DATA"))
 else
     MapVote.RecentMaps = {}
 end
 
-if file.Exists("mapvote/blacklist.txt", "DATA") then
+if file.Exists( "mapvote/blacklist.txt", "DATA" ) then
     MapVote.BlackList = util.JSONToTable(file.Read("mapvote/blacklist.txt", "DATA"))
 else
     MapVote.BlackList = {}
@@ -23,30 +23,90 @@ local function SetMaps()
 end
 SetMaps()
 
-function isAvailableMap(map) 
-    return tobool(MapVote.BlackList[map] || MapVote.RecentMaps[map]) 
+function isAvailableMap(map)
+    return !( IsValid(MapVote.BlackList[map]) || IsValid(MapVote.RecentMaps[map]) )
 end
 
-function MapVote.CreateMapList() 
+function MapVote.CreateMapList()
     local actualMaps = {}
-    
-    for _, map in RandomPairs(MapVote.AllMaps) do
-        if (#actualMaps == MapVote.Config.MaxMaps) then break end
 
-        if ( isAvailableMap(map) ) then continue end
-        
+    for _, map in RandomPairs(MapVote.NominatedMaps) do
+        if ( #actualMaps == MapVote.Config.MaxNominatedMaps ) then break end
         table.insert(actualMaps, map)
     end
 
-    MapVote.Maps = actualMaps
+    for _, map in RandomPairs(MapVote.AllMaps) do
+        if ( #actualMaps == MapVote.Config.MaxMaps ) then break end
+
+        if ( isAvailableMap(map) ) then continue end
+
+        table.insert(actualMaps, map)
+    end
+
+    MapVote.CurrentMaps = actualMaps
     return true
+end
+
+function MapVote.Start()
+    MapVote.Votes = {}
+     
+    MapVote.CreateMapList()
+    if ( !MapVote.CurrentMaps ) then error("createmaplist err") end
+
+    net.Start("MapVote_Start")
+        net.WriteTable(MapVote.CurrentMaps)
+    net.Broadcast()
+
+    MapVote.Allow = true
+
+    timer.Create("MapVote_ActivePhase", MapVote.Config.VoteTime, 1, function()
+        MapVote.Allow = false
+        local results = {}
+
+        for k, v in pairs(MapVote.Votes) do
+            if ( !results[v] ) then
+                results[v] = 0
+            end
+
+            for ply, map_id in pairs(player.GetAll()) do
+                if ( ply:SteamID() == k ) then
+                    if ( MapVote.Config.ExtraPower[ply:GetUserGroup()] ) then
+                        results[v] = results[v] + MapVote.Config.ExtraPower[ply:GetUserGroup()]
+                    else
+                        results[v] = results[v] + 1
+                    end
+                end
+            end
+
+            local winner_map = table.GetWinningKey(results)
+
+            net.Start("MapVote_End")
+                net.WriteUInt(winner_map, 32)
+            net.Broadcast()
+
+            timer.Simple(3, function()
+                RunConsoleCommand("changelevel", MapVote.CurrentMaps[winner_map])
+            end)
+        end
+    end)
+end
+
+function MapVote.Cancel()
+    if ( MapVote.Allow ) then
+        MapVote.Allow = false
+
+        net.Start("MapVote_Cancel")
+        net.Broadcast()
+
+        timer.Remove("MapVote_ActivePhase")
+    end
 end
 
 function MapVote.ChangeRecentMapsList()
     local CurrentMap = string.lower( string.gsub(game.GetMap(), "%.bsp$", "") )
     table.insert(MapVote.RecentMaps, 1, CurrentMap)
 
-    if (#MapVote.RecentMaps > MapVote.Config.MapsBeforeRevote) then 
+    if ( #MapVote.RecentMaps > MapVote.Config.MapsBeforeRevote ) then
         table.remove(MapVote.RecentMaps)
     end
 
