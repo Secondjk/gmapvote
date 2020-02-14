@@ -1,4 +1,5 @@
 MapVote.NominatedMaps = MapVote.NominatedMaps or {}
+MapVote.Votes = MapVote.Votes or {}
 
 util.AddNetworkString("MapVote_Start")
 util.AddNetworkString("MapVote_Update")

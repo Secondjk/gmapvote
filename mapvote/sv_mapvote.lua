@@ -38,7 +38,7 @@ function MapVote.CreateMapList()
     for _, map in RandomPairs(MapVote.AllMaps) do
         if ( #actualMaps == MapVote.Config.MaxMaps ) then break end
 
-        if ( !isAvailableMap(map) ) then continue end
+        if ( !isAvailableMap(map) || table.HasValue(actualMaps, map) ) then continue end
 
         table.insert(actualMaps, map)
     end
@@ -48,8 +48,6 @@ function MapVote.CreateMapList()
 end
 
 function MapVote.Start()
-    MapVote.Votes = {}
-
     if ( !MapVote.CreateMapList() ) then error("createmaplist err") end
 
     net.Start("MapVote_Start")
@@ -62,12 +60,16 @@ function MapVote.Start()
         MapVote.Allow = false
         local results = {}
 
+        for k, v in pairs(player.GetAll()) do
+            MapVote.Votes[v:SteamID()] = MapVote.CurrentMaps[1]
+        end
+
         for k, v in pairs(MapVote.Votes) do
             if ( !results[v] ) then
                 results[v] = 0
             end
 
-            for ply, map_id in pairs(player.GetAll()) do
+            for _, ply in pairs(player.GetAll()) do
                 if ( ply:SteamID() == k ) then
                     if ( MapVote.Config.ExtraPower[ply:GetUserGroup()] ) then
                         results[v] = results[v] + MapVote.Config.ExtraPower[ply:GetUserGroup()]
@@ -80,12 +82,12 @@ function MapVote.Start()
             local winner_map = table.GetWinningKey(results)
 
             net.Start("MapVote_End")
-                net.WriteUInt(winner_map, 32)
+                net.WriteString(winner_map)
             net.Broadcast()
 
             timer.Simple(3, function()
-                RunConsoleCommand("changelevel", MapVote.CurrentMaps[winner_map])
-            end)
+                RunConsoleCommand("changelevel", winner_map)
+            end) 
         end
     end)
 end
