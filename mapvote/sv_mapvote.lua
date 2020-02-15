@@ -52,6 +52,7 @@ function MapVote.Start()
 
     net.Start("MapVote_Start")
         net.WriteTable(MapVote.CurrentMaps)
+        net.WriteUInt(MapVote.Config.VoteTime, 16)
     net.Broadcast()
 
     MapVote.Allow = true
@@ -61,7 +62,7 @@ function MapVote.Start()
         local results = {}
 
         for k, v in pairs(player.GetAll()) do
-            MapVote.Votes[v:SteamID()] = MapVote.CurrentMaps[1]
+            MapVote.Votes[v:SteamID()] = 1
         end
 
         for k, v in pairs(MapVote.Votes) do
@@ -79,14 +80,14 @@ function MapVote.Start()
                 end
             end
 
-            local winner_map = table.GetWinningKey(results)
+            local winner_key = table.GetWinningKey(results)
 
             net.Start("MapVote_End")
-                net.WriteString(winner_map)
+                net.WriteUInt(winner_key, 32)
             net.Broadcast()
 
             timer.Simple(3, function()
-                RunConsoleCommand("changelevel", winner_map)
+                RunConsoleCommand("changelevel", MapVote.CurrentMaps[winner_key])
             end) 
         end
     end)
