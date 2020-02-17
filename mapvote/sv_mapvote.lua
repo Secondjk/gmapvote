@@ -60,11 +60,7 @@ function MapVote.Start()
     timer.Create("MapVote_ActivePhase", MapVote.Config.VoteTime, 1, function()
         MapVote.Allow = false
         local results = {}
-
-        for k, v in pairs(player.GetAll()) do
-            MapVote.Votes[v:SteamID()] = 1
-        end
-
+        
         for k, v in pairs(MapVote.Votes) do
             if ( !results[v] ) then
                 results[v] = 0

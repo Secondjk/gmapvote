@@ -14,7 +14,8 @@ net.Receive("MapVote_Update", function(len, ply)
             MapVote.Votes[ply:SteamID()] = map_id
 
             net.Start("MapVote_Update")
-                net.WriteTable(MapVote.Votes)
+                net.WriteEntity(ply)
+                net.WriteUInt(map_id, 32)
             net.Broadcast()
         end
     end
