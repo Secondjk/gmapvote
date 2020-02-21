@@ -1,5 +1,6 @@
 MapVote.AllMaps = MapVote.AllMaps or {}
 MapVote.Allow = false
+MapVote.Wait = 60 * MapVote.Config.Wait + CurTime()
 
 if file.Exists( "mapvote/recent.txt", "DATA" ) then
     MapVote.RecentMaps = util.JSONToTable(file.Read("mapvote/recent.txt", "DATA"))
@@ -47,6 +48,16 @@ function MapVote.CreateMapList()
     return true
 end
 
+function MapVote.CheckRTV()
+    MapVote.RTVAmount = math.Round(#player.GetHumans() * MapVote.RTVPercentage)
+
+    if ( MapVote.RTVActual >= MapVote.RTVAmount && !MapVote.Allow ) then
+        MapVote.Start()
+        hook.Remove("MapVote_RTVCheck")
+    end
+end
+hook.Add("Think", "MapVote_RTVCheck", MapVote.CheckRTV)
+
 function MapVote.Start()
     if ( !MapVote.CreateMapList() ) then error("createmaplist err") end
 
@@ -60,7 +71,7 @@ function MapVote.Start()
     timer.Create("MapVote_ActivePhase", MapVote.Config.VoteTime, 1, function()
         MapVote.Allow = false
         local results = {}
-        
+
         for k, v in pairs(MapVote.Votes) do
             if ( !results[v] ) then
                 results[v] = 0
@@ -77,14 +88,15 @@ function MapVote.Start()
             end
 
             local winner_key = table.GetWinningKey(results)
+            local winner_map = MapVote.CurrentMaps[winner_key]
 
             net.Start("MapVote_End")
                 net.WriteUInt(winner_key, 32)
             net.Broadcast()
 
             timer.Simple(3, function()
-                RunConsoleCommand("changelevel", MapVote.CurrentMaps[winner_key])
-            end) 
+                RunConsoleCommand("changelevel", winner_map)
+            end)
         end
     end)
 end
@@ -110,4 +122,4 @@ function MapVote.ChangeRecentMapsList()
 
     file.Write("mapvote/recent.txt", util.TableToJSON(MapVote.RecentMaps))
 end
-hook.Add("ShutDown", "ChangeRecentMapsList", MapVote.ChangeRecentMapsList)
+hook.Add("ShutDown", "MapVote_ChangeRecentMapsList", MapVote.ChangeRecentMapsList)
