@@ -4,13 +4,15 @@ MapVote.DefaultConfig = {
     RTVPercentage = 0.66,
     --MapTime = 30, -- minutes
     MapsBeforeRevote = 4,
-    Wait = 3, -- m
+    Wait = 30, -- m
     AllowCurrentMap = true,
     MaxNominatesPerPlayer = 1,
     PlayersCanNominateMaps = true,
     MaxNominatedMaps = 3,
     NominateCommands = { "rtvmap", "nominate", "addmap", "addnominate" },
-    RTVCommands = { "rtv", "votemap", "mapvote" }
+    RTVCommands = { "rtv", "mapvote" },
+    PreColor = Color(32, 135, 199), 
+    Prefix = "RTV"
 }
 
 MapVote.DefaultConfig.ExtraPower = {

@@ -1,5 +1,6 @@
 MapVote.AllMaps = MapVote.AllMaps or {}
 MapVote.Allow = false
+MapVote.RTVActual = 0
 MapVote.Wait = 60 * MapVote.Config.Wait + CurTime()
 
 if file.Exists( "mapvote/recent.txt", "DATA" ) then
@@ -45,15 +46,18 @@ function MapVote.CreateMapList()
     end
 
     MapVote.CurrentMaps = actualMaps
-    return true
+    return tobool(MapVote.CurrentMaps)
 end
 
 function MapVote.CheckRTV()
-    MapVote.RTVAmount = math.Round(#player.GetHumans() * MapVote.RTVPercentage)
+    if ( #player.GetHumans() < 1 ) then return end
+
+    MapVote.RTVAmount = math.Round(#player.GetHumans() * MapVote.Config.RTVPercentage) 
 
     if ( MapVote.RTVActual >= MapVote.RTVAmount && !MapVote.Allow ) then
-        MapVote.Start()
+        MapVote.SendMessage("A mapvote has began")
         hook.Remove("MapVote_RTVCheck")
+        MapVote.Start()
     end
 end
 hook.Add("Think", "MapVote_RTVCheck", MapVote.CheckRTV)
@@ -77,7 +81,7 @@ function MapVote.Start()
                 results[v] = 0
             end
 
-            for _, ply in pairs(player.GetAll()) do
+            for _, ply in pairs(player.GetHumans()) do
                 if ( ply:SteamID() == k ) then
                     if ( MapVote.Config.ExtraPower[ply:GetUserGroup()] ) then
                         results[v] = results[v] + MapVote.Config.ExtraPower[ply:GetUserGroup()]
@@ -86,18 +90,18 @@ function MapVote.Start()
                     end
                 end
             end
-
-            local winner_key = table.GetWinningKey(results)
-            local winner_map = MapVote.CurrentMaps[winner_key]
-
-            net.Start("MapVote_End")
-                net.WriteUInt(winner_key, 32)
-            net.Broadcast()
-
-            timer.Simple(3, function()
-                RunConsoleCommand("changelevel", winner_map)
-            end)
         end
+
+        local winner_key = table.GetWinningKey(results) or math.random(#MapVote.CurrentMaps)
+        local winner_map = MapVote.CurrentMaps[winner_key]
+
+        net.Start("MapVote_End")
+            net.WriteUInt(winner_key, 32)
+        net.Broadcast()
+
+        timer.Simple(3, function()
+            RunConsoleCommand("changelevel", winner_map)
+        end)
     end)
 end
 

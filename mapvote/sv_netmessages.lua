@@ -1,6 +1,6 @@
 MapVote.NominatedMaps = MapVote.NominatedMaps or {}
 MapVote.Votes = MapVote.Votes or {}
-MapVote.RTVActual = 0
+MapVote.RTVs = MapVote.RTVs or {}
 
 util.AddNetworkString("MapVote_Start")
 util.AddNetworkString("MapVote_Update")
@@ -23,11 +23,13 @@ net.Receive("MapVote_Update", function(len, ply)
     end
 end)
 
-function MapVote.SendMessage(ply, msg, locally)
+function MapVote.SendMessage(msg, ply)
     net.Start("MapVote_SendMessage")
     net.WriteString(msg)
+    net.WriteColor(MapVote.Config.PreColor)
+    net.WriteString(MapVote.Config.Prefix)
 
-    if ( locally ) then
+    if ( IsValid(ply) ) then
         net.Send(ply)
     else
         net.Broadcast()
@@ -35,17 +37,26 @@ function MapVote.SendMessage(ply, msg, locally)
 end
 
 function MapVote.RTV(ply)
-    if ( !MapVote.Allow ) then return false end
+    if ( MapVote.Allow ) then return end
 
-    if ( !ply.RTVed ) then
-        MapVote.SendMessage(ply, "You have already rocked the vote!", true)
+    if ( MapVote.RTVs[ply:SteamID()] ) then
+        MapVote.SendMessage("You have already rocked the vote!", ply)
     else
-        MapVote.SendMessage(ply, string.sub(ply:Nick(), 1, 16) .. " has rocked the vote! " .. MapVote.RTVAmount - MapVote.RTVActual .. " more votes required to start a vote.")
         MapVote.RTVActual = MapVote.RTVActual + 1
-        ply.RTVed = true
+        if ( MapVote.RTVActual < MapVote.RTVAmount ) then
+            MapVote.SendMessage(string.sub(ply:Nick(), 1, 16) .. " has rocked the vote! " .. MapVote.RTVAmount - MapVote.RTVActual .. " more votes required to start a vote.", ply)
+        end
+        MapVote.RTVs[ply:SteamID()] = true
     end
-
 end
+
+function MapVote.PlayerDisconnect(ply)
+    if ( MapVote.RTVs[ply:SteamID()] ) then
+        MapVote.RTVs[ply:SteamID()] = false
+        MapVote.RTVActual = MapVote.RTVActual - 1
+    end
+end
+hook.Add("PlayerDisconnected", "MapVote_PlayerDisconnected", MapVote.PlayerDisconnect)
 
 function MapVote.UpdateNominatedMap(ply, map)
     if !( isAvailableMap(map) && table.HasValue(MapVote.AllMaps, map) &&
@@ -56,8 +67,10 @@ function MapVote.UpdateNominatedMap(ply, map)
 end
 
 function MapVote.RTVCommand(ply, text)
-    if ( string.match(text, "^[!/:.]" .. MapVote.Config.RTVCommands) ) then
-        MapVote.RTV(ply)
+    for _, v in pairs(MapVote.Config.RTVCommands) do
+        if (string.match(string.lower(text), "^[!/:.]" .. v)) then
+            MapVote.RTV(ply)
+        end
     end
 end
 hook.Add("PlayerSay", "MapVote_RTVChatCommands", MapVote.RTVCommand)
@@ -70,9 +83,9 @@ function MapVote.NominateChatCommands(ply, text)
         local map = arguments[2]
 
         if ( MapVote.UpdateNominatedMap(ply, map) ) then
-            MapVote.SendMessage(ply, ply:Nick() .. " has nominated a" .. map)
+            MapVote.SendMessage(ply:Nick() .. " has nominated a" .. map)
         else
-            MapVote.SendMessage(ply, "Can't nominated " .. map)
+            MapVote.SendMessage("Can't nominated " .. map, ply)
         end
     end
 end
