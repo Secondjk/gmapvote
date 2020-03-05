@@ -1,4 +1,4 @@
-function MapVote:CreateFont(name, size, weigth) 
+function MapVote.CreateFont(name, size, weigth) 
     surface.CreateFont(name, {
         font = "Monsterrat Medium",
         size = size,
@@ -26,7 +26,7 @@ net.Receive("MapVote_Update", function()
     local ply = net.ReadEntity()
     local map_id = net.ReadUInt(32)
 
-    if ( IsValid(ply) ) then MapVote.Votes[ply:SteamID()] = map_id
+    if ( IsValid(ply) ) then MapVote.Votes[ply:SteamID()] = map_id end
 
     if ( IsValid(MapVote.PANEL) ) then
         MapVote.PANEL:AddVotePlayer(ply)
